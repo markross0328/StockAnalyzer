@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignalValue Auth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* Auth page uses the same visual language as the dashboard. */
+    :root {
+      --ink: #14211f;
+      --muted: #64706d;
+      --line: #d9e1dd;
+      --soft: #f3f7f4;
+      --mint: #2f8f6b;
+      --mint-dark: #176149;
+      --blue: #386fa4;
+      --shadow: 0 18px 44px rgba(32, 46, 42, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(236, 244, 239, .9), rgba(247, 249, 246, .98)),
+        radial-gradient(circle at 15% 8%, rgba(47, 143, 107, .18), transparent 32%),
+        radial-gradient(circle at 85% 4%, rgba(56, 111, 164, .14), transparent 34%);
+    }
+
+    button, input { font: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    /* Two-column auth shell: brand context on the left, forms on the right. */
+    .auth-page {
+      display: grid;
+      grid-template-columns: minmax(320px, .9fr) minmax(360px, 1fr);
+      min-height: 100vh;
+    }
+
+    .brand-side {
+      display: grid;
+      align-content: space-between;
+      padding: 34px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, .66);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--mint), var(--blue));
+      box-shadow: 0 12px 28px rgba(47, 143, 107, .32);
+    }
+
+    .brand strong { display: block; font-size: 16px; }
+    .brand span, .supporting { color: var(--muted); }
+
+    h1 {
+      margin: 58px 0 14px;
+      max-width: 520px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .supporting {
+      max-width: 520px;
+      margin: 0;
+      line-height: 1.6;
+      font-size: 17px;
+    }
+
+    .route-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      width: fit-content;
+      min-height: 42px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: #40514d;
+      font-weight: 700;
+    }
+
+    /* Auth form panel with tabs for login and signup. */
+    .form-side {
+      display: grid;
+      place-items: center;
+      padding: 34px;
+    }
+
+    .auth-panel {
+      width: min(480px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 10px;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+      background: #f8faf8;
+    }
+
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .tab.active {
+      border-color: rgba(47, 143, 107, .22);
+      background: #e9f3ee;
+      color: var(--mint-dark);
+    }
+
+    /* Forms are swapped by hash: #login or #signup. */
+    form {
+      display: none;
+      gap: 14px;
+      padding: 22px;
+    }
+
+    form.active { display: grid; }
+
+    .form-title h2 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .form-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 13px;
+      outline: 0;
+    }
+
+    input:focus {
+      border-color: rgba(47, 143, 107, .7);
+      box-shadow: 0 0 0 4px rgba(47, 143, 107, .12);
+    }
+
+    .primary, .ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 48px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: var(--mint);
+      color: #fff;
+    }
+
+    .ghost {
+      background: #fff;
+      border-color: var(--line);
+      color: #41514d;
+    }
+
+    .form-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    /* Small implementation handoff details for connecting to the auth backend. */
+    .handoff {
+      display: grid;
+      gap: 10px;
+      padding: 16px 22px 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .handoff div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .handoff strong { color: var(--ink); }
+
+    /* Responsive auth layout for tablets and phones. */
+    @media (max-width: 860px) {
+      .auth-page { grid-template-columns: 1fr; }
+      .brand-side { min-height: auto; gap: 44px; border-right: 0; border-bottom: 1px solid var(--line); }
+      h1 { margin-top: 34px; }
+      .form-side { place-items: start center; }
+    }
+
+    @media (max-width: 560px) {
+      .brand-side, .form-side { padding: 18px 14px; }
+      .tabs { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="auth-page">
+    <!-- Left side: product identity and return path back to the dashboard. -->
+    <section class="brand-side">
+      <div>
+        <a class="brand" href="index.html">
+          <div class="brand-mark"><i data-lucide="line-chart"></i></div>
+          <div>
+            <strong>SignalValue</strong>
+            <span>Back to dashboard</span>
+          </div>
+        </a>
+        <h1>Login and signup live outside the research dashboard.</h1>
+        <p class="supporting">This page is the clean handoff point for Ian's auth work: once a user is authenticated, the dashboard can scope favorites by session user id.</p>
+      </div>
+      <a class="route-chip" href="index.html"><i data-lucide="arrow-left"></i> Dashboard</a>
+    </section>
+
+    <!-- Right side: login/signup tabs that Ian's auth can connect to later. -->
+    <section class="form-side">
+      <div class="auth-panel">
+        <!-- Tabs update the URL hash so this page can open directly to login or signup. -->
+        <div class="tabs" role="tablist" aria-label="Authentication mode">
+          <a class="tab active" id="loginTab" href="#login"><i data-lucide="log-in"></i> Login</a>
+          <a class="tab" id="signupTab" href="#signup"><i data-lucide="user-plus"></i> Sign up</a>
+        </div>
+
+        <!-- Existing user flow. -->
+        <form class="active" id="loginForm">
+          <div class="form-title">
+            <h2>Welcome back</h2>
+            <p>Use the account Ian authenticates to load user-specific favorites.</p>
+          </div>
+          <label>Email
+            <input type="email" value="avery@example.com" autocomplete="email">
+          </label>
+          <label>Password
+            <input type="password" value="password" autocomplete="current-password">
+          </label>
+          <div class="form-actions">
+            <button class="primary" type="button"><i data-lucide="log-in"></i> Login</button>
+            <a class="ghost" href="index.html"><i data-lucide="layout-dashboard"></i> Continue to dashboard</a>
+          </div>
+        </form>
+
+        <!-- New user flow. -->
+        <form id="signupForm">
+          <div class="form-title">
+            <h2>Create account</h2>
+            <p>New accounts get their own favorite stocks and industry filters.</p>
+          </div>
+          <label>Name
+            <input type="text" value="Jayden Keaton" autocomplete="name">
+          </label>
+          <label>Email
+            <input type="email" value="jayden@example.com" autocomplete="email">
+          </label>
+          <label>Password
+            <input type="password" value="password" autocomplete="new-password">
+          </label>
+          <div class="form-actions">
+            <button class="primary" type="button"><i data-lucide="user-plus"></i> Sign up</button>
+            <a class="ghost" href="index.html"><i data-lucide="layout-dashboard"></i> Continue to dashboard</a>
+          </div>
+        </form>
+
+        <div class="handoff">
+          <div><strong>Frontend route</strong><span>/auth</span></div>
+          <div><strong>Auth owner</strong><span>Ian</span></div>
+          <div><strong>Dashboard needs</strong><span>session user id</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Switch between login and signup forms based on the URL hash.
+    function setMode(mode) {
+      const login = mode !== "signup";
+      document.getElementById("loginForm").classList.toggle("active", login);
+      document.getElementById("signupForm").classList.toggle("active", !login);
+      document.getElementById("loginTab").classList.toggle("active", login);
+      document.getElementById("signupTab").classList.toggle("active", !login);
+    }
+
+    window.addEventListener("hashchange", () => setMode(location.hash.replace("#", "")));
+    setMode(location.hash.replace("#", ""));
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
