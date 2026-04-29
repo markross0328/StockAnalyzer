@@ -124,6 +124,7 @@ const INITIAL_USERS = {
 
 const INDUSTRIES = ['All', 'Technology', 'Healthcare', 'Auto', 'Consumer']
 
+// Metric helpers keep the Lynch-rule calculations in one predictable place.
 function growthOverPe(stock) {
   return stock.growth / stock.pe
 }
@@ -157,8 +158,11 @@ function pathFromIncome(income) {
 }
 
 function App() {
+  // View state controls whether the user sees the dashboard or the separate auth screen.
   const [view, setView] = useState('dashboard')
   const [authMode, setAuthMode] = useState('login')
+
+  // Demo app state. Backend/auth integration can replace these with API/session data.
   const [users, setUsers] = useState(INITIAL_USERS)
   const [currentUser, setCurrentUser] = useState('Avery')
   const [currentTicker, setCurrentTicker] = useState('MSFT')
@@ -174,6 +178,7 @@ function App() {
     (ticker) => industryFilter === 'All' || STOCKS[ticker].industry === industryFilter,
   )
 
+  // Recompute portfolio summary cards when the current user's favorites change.
   const summary = useMemo(() => {
     const industryCounts = favoriteTickers.reduce((counts, ticker) => {
       const industry = STOCKS[ticker].industry
@@ -196,6 +201,7 @@ function App() {
 
   const sparkline = pathFromIncome(activeStock.income)
 
+  // Opens the auth screen in either login or signup mode.
   function openAuth(mode) {
     setAuthMode(mode)
     setView('auth')
@@ -206,6 +212,7 @@ function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  // Handles ticker searches and opens the not-found modal for unknown symbols.
   function handleSearch(event) {
     event.preventDefault()
     const ticker = tickerInput.trim().toUpperCase()
@@ -337,6 +344,7 @@ function App() {
   )
 }
 
+// Left navigation and user switcher for the dashboard.
 function Sidebar({ currentUser, setCurrentUser, scrollToSection }) {
   return (
     <aside className="sidebar">
@@ -391,6 +399,7 @@ function Sidebar({ currentUser, setCurrentUser, scrollToSection }) {
   )
 }
 
+// Main stock analysis card: identity, price, net-income trend, and Lynch metrics.
 function StockPanel({ stock, ticker, sparkline, isFavorite, onFavorite }) {
   return (
     <section className="panel">
@@ -451,6 +460,7 @@ function StockPanel({ stock, ticker, sparkline, isFavorite, onFavorite }) {
   )
 }
 
+// Reusable metric card for growth, P/E, and Growth / P/E.
 function Metric({ icon, label, value, tone = '', children }) {
   return (
     <article className="metric">
@@ -461,6 +471,7 @@ function Metric({ icon, label, value, tone = '', children }) {
   )
 }
 
+// Deeper research card for target price, earnings, and peer valuation.
 function ResearchBrief({ stock, ticker }) {
   return (
     <section className="panel" id="researchBrief">
@@ -482,6 +493,7 @@ function ResearchBrief({ stock, ticker }) {
   )
 }
 
+// Favorite stock cards plus the industry filter dropdown.
 function FavoritesPanel({ favorites, industryFilter, setIndustryFilter, onOpenFavorite }) {
   return (
     <section className="panel" id="favoritesPanel">
@@ -520,6 +532,7 @@ function FavoritesPanel({ favorites, industryFilter, setIndustryFilter, onOpenFa
   )
 }
 
+// Research signals that could later come from analyst/earnings APIs.
 function SpecialSignals({ stock }) {
   return (
     <section className="panel">
@@ -541,6 +554,7 @@ function SpecialSignals({ stock }) {
   )
 }
 
+// Full comparison table for the current user's saved stocks.
 function FavoritesTable({ favorites }) {
   return (
     <section className="panel table-wrap wide-panel">
@@ -583,6 +597,7 @@ function FavoritesTable({ favorites }) {
   )
 }
 
+// Peer comparison list for the selected stock.
 function Peers({ stock }) {
   return (
     <section className="panel">
@@ -609,6 +624,7 @@ function Peers({ stock }) {
   )
 }
 
+// Portfolio-level summary derived from saved stocks.
 function PortfolioSummary({ summary }) {
   return (
     <section className="panel">
@@ -628,6 +644,7 @@ function PortfolioSummary({ summary }) {
   )
 }
 
+// Modal shown when the searched ticker is not in the demo data set.
 function TickerError({ onClose, onAnalyzeMsft }) {
   return (
     <div className="modal-backdrop show" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -645,6 +662,7 @@ function TickerError({ onClose, onAnalyzeMsft }) {
   )
 }
 
+// Separate auth view for Ian's login/signup integration.
 function AuthView({ authMode, setAuthMode, setView }) {
   const isLogin = authMode === 'login'
 
@@ -694,6 +712,7 @@ function AuthView({ authMode, setAuthMode, setView }) {
   )
 }
 
+// Login form shell. Ian can connect the submit action to the auth backend.
 function LoginForm({ setView }) {
   return (
     <form className="auth-form">
@@ -717,6 +736,7 @@ function LoginForm({ setView }) {
   )
 }
 
+// Signup form shell. Ian can connect this to account creation.
 function SignupForm({ setView }) {
   return (
     <form className="auth-form">

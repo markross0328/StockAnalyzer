@@ -1,11 +1,14 @@
+/* Global reset so components size predictably. */
 * {
   box-sizing: border-box;
 }
 
+/* Keep in-page dashboard navigation smooth. */
 html {
   scroll-behavior: smooth;
 }
 
+/* Base document theme shared by the React dashboard and auth view. */
 body {
   margin: 0;
   min-height: 100vh;
@@ -17,6 +20,7 @@ body {
     radial-gradient(circle at 82% 4%, rgba(56, 111, 164, .16), transparent 34%);
 }
 
+/* Normalize controls so buttons and inputs inherit the app font. */
 button,
 input,
 select {
@@ -27,6 +31,7 @@ button {
   cursor: pointer;
 }
 
+/* Vite mounts the entire React app inside #root. */
 #root {
   min-height: 100vh;
 }
