@@ -140,6 +140,20 @@
   box-shadow: 0 8px 18px rgba(31, 48, 43, .08);
 }
 
+.signed-in-user {
+  display: grid;
+  gap: 4px;
+}
+
+.signed-in-user strong {
+  font-size: 14px;
+}
+
+.signed-in-user span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .watchlist-mini {
   display: grid;
   gap: 10px;
@@ -196,6 +210,13 @@ h3 {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.auth-inline-error {
+  margin: 12px 0 0;
+  color: var(--rose);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .account-pill {
@@ -844,6 +865,13 @@ select {
 
 .handoff strong {
   color: var(--ink);
+}
+
+.auth-error {
+  margin: 0;
+  color: var(--rose);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* Tablet layout: collapse dashboard columns and slim the sidebar. */

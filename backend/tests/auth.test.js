@@ -58,6 +58,7 @@ describe("auth flow", () => {
   });
 
   test("logout revokes token jti", async () => {
+    revokedTokenRepository.isTokenRevoked.mockResolvedValue(false);
     revokedTokenRepository.revokeToken.mockResolvedValue();
     const { token } = createAccessToken({
       userId: "user-1",
@@ -74,5 +75,41 @@ describe("auth flow", () => {
     const arg = revokedTokenRepository.revokeToken.mock.calls[0][0];
     expect(arg.jti).toBeDefined();
     expect(typeof arg.expiresAtUnix).toBe("number");
+  });
+
+  test("me returns authenticated user profile", async () => {
+    revokedTokenRepository.isTokenRevoked.mockResolvedValue(false);
+    const { token } = createAccessToken({
+      userId: "user-77",
+      email: "maya@example.com",
+      name: "Maya",
+    });
+
+    const response = await request(app).get("/auth/me").set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.user).toEqual({
+      userId: "user-77",
+      email: "maya@example.com",
+      name: "Maya",
+    });
+  });
+
+  test("logout rejects revoked token", async () => {
+    revokedTokenRepository.isTokenRevoked.mockResolvedValue(true);
+    const { token } = createAccessToken({
+      userId: "user-1",
+      email: "avery@example.com",
+      name: "Avery",
+    });
+
+    const response = await request(app)
+      .post("/auth/logout")
+      .set("Authorization", `Bearer ${token}`)
+      .send();
+
+    expect(response.status).toBe(401);
+    expect(response.body.error).toBe("Token has been revoked");
+    expect(revokedTokenRepository.revokeToken).not.toHaveBeenCalled();
   });
 });

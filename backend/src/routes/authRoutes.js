@@ -3,9 +3,42 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const userRepository = require("../repositories/userRepository");
 const revokedTokenRepository = require("../repositories/revokedTokenRepository");
-const { createAccessToken, verifyAccessToken } = require("../services/tokenService");
+const { createAccessToken } = require("../services/tokenService");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
+
+function mapAuthError(error, fallbackMessage) {
+  const details = error?.message || "";
+
+  if (error?.name === "ResourceNotFoundException") {
+    return {
+      status: 500,
+      message:
+        "Database tables are missing. Run `npm run dynamodb:setup` and verify table names in .env.",
+    };
+  }
+
+  if (error?.name === "ValidationException" && details.includes("email-index")) {
+    return {
+      status: 500,
+      message:
+        "Database index `email-index` is missing. Recreate tables with `npm run dynamodb:setup`.",
+    };
+  }
+
+  if (error?.name === "UnrecognizedClientException" || details.includes("security token")) {
+    return {
+      status: 500,
+      message: "AWS credentials are invalid or missing for DynamoDB access.",
+    };
+  }
+
+  return {
+    status: 500,
+    message: fallbackMessage,
+  };
+}
 
 router.post("/signup", async (req, res) => {
   try {
@@ -38,7 +71,8 @@ router.post("/signup", async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ error: "Failed to create account" });
+    const mapped = mapAuthError(error, "Failed to create account");
+    return res.status(mapped.status).json({ error: mapped.message });
   }
 });
 
@@ -69,27 +103,32 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ error: "Failed to log in" });
+    const mapped = mapAuthError(error, "Failed to log in");
+    return res.status(mapped.status).json({ error: mapped.message });
   }
 });
 
-router.post("/logout", async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(400).json({ error: "Missing Bearer token" });
-    }
+router.get("/me", requireAuth, async (req, res) => {
+  return res.status(200).json({
+    user: {
+      userId: req.user.userId,
+      name: req.user.name,
+      email: req.user.email,
+    },
+  });
+});
 
-    const token = authHeader.slice("Bearer ".length);
-    const payload = verifyAccessToken(token);
+router.post("/logout", requireAuth, async (req, res) => {
+  try {
     await revokedTokenRepository.revokeToken({
-      jti: payload.jti,
-      expiresAtUnix: payload.exp,
+      jti: req.user.jti,
+      expiresAtUnix: req.user.exp,
     });
 
     return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
-    return res.status(401).json({ error: "Invalid token" });
+    const mapped = mapAuthError(error, "Failed to log out");
+    return res.status(mapped.status).json({ error: mapped.message });
   }
 });
 
