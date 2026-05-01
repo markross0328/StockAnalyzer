@@ -132,7 +132,40 @@ Deploy flow:
 2. In Render, create a Blueprint deploy from the repository.
 3. Confirm environment variables (`JWT_SECRET`, table names, `AWS_REGION`) and attach AWS credentials with DynamoDB access.
 4. Run `npm run dynamodb:setup` once against the target AWS account to create tables.
+### Backend
+The backend is built with Python and FastAPI, utilizing the Alpha Vantage API for stock data. Mark's API endpoints are implemented in:
+- `backend/main.py` - FastAPI routes (`/api/stock/{ticker}` and `/api/stock/{ticker}/details`).
+- `backend/stock_service.py` - Handles requests to Alpha Vantage and mathematical logic (Growth, PEG, etc.).
+- `backend/test_main.py` - Unit tests mocking Alpha Vantage.
 
----
+To set up and run the backend locally:
+1. Navigate to the `backend` directory:
+   ```bash
+   cd backend
+   ```
+2. Make sure your `.env` file has your premium Alpha Vantage API key:
+   ```env
+   ALPHA_VANTAGE_API_KEY=your_api_key_here
+   ```
+3. Activate the virtual environment (or create one):
+   ```bash
+   # Windows
+   .\venv\Scripts\activate
+   
+   # Mac/Linux
+   source venv/bin/activate
+   ```
+4. Install the backend dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. Run the FastAPI development server:
+   ```bash
+   uvicorn main:app --reload
+   ```
+The API will be available at `http://localhost:8000`.
 
-*This project structure is ready for the development team to implement the core logic and begin pushing code.*
+To run the unit tests, execute:
+```bash
+pytest test_main.py
+```

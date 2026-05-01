@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   ArrowLeft,
   BarChart3,
@@ -21,101 +21,6 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-// Demo stock records. Mark can replace this object with backend API responses.
-const STOCKS = {
-  MSFT: {
-    name: 'Microsoft Corp.',
-    industry: 'Technology',
-    price: '$412.80',
-    move: '+1.34% today',
-    growth: 18.6,
-    pe: 31.2,
-    income: [61.3, 72.7, 72.4, 88.1, 101.8],
-    thesis:
-      'Strong cloud and productivity revenue, durable margins, and net-income growth currently outruns most peers but not its own P/E.',
-    target: '$470',
-    earnings: 'Jul 23',
-    peerPe: '28.4',
-    peers: ['AAPL', 'GOOGL', 'ORCL'],
-    events: ['Azure growth is the key margin driver', 'AI capex watch item', 'Dividend raised 10% last cycle'],
-  },
-  AAPL: {
-    name: 'Apple Inc.',
-    industry: 'Technology',
-    price: '$184.42',
-    move: '+0.58% today',
-    growth: 7.4,
-    pe: 27.9,
-    income: [94.7, 99.8, 97.0, 93.7, 103.5],
-    thesis: 'Exceptional cash generation, but net-income growth is slower than the current earnings multiple.',
-    target: '$210',
-    earnings: 'Aug 1',
-    peerPe: '25.2',
-    peers: ['MSFT', 'GOOGL', 'SONY'],
-    events: ['Services mix improving', 'Hardware cycle risk', 'Buyback remains material'],
-  },
-  TSLA: {
-    name: 'Tesla Inc.',
-    industry: 'Auto',
-    price: '$173.74',
-    move: '-0.82% today',
-    growth: 24.1,
-    pe: 58.6,
-    income: [5.5, 12.6, 15.0, 7.1, 13.1],
-    thesis: 'Growth remains exciting, but P/E requires a very forgiving view of auto margins and optionality.',
-    target: '$205',
-    earnings: 'Jul 17',
-    peerPe: '18.9',
-    peers: ['F', 'GM', 'RIVN'],
-    events: ['Delivery growth is uneven', 'Energy storage accelerating', 'Margins drive the debate'],
-  },
-  NKE: {
-    name: 'Nike Inc.',
-    industry: 'Consumer',
-    price: '$91.16',
-    move: '+0.21% today',
-    growth: 5.8,
-    pe: 23.4,
-    income: [5.7, 6.0, 5.1, 5.5, 6.3],
-    thesis: 'A global brand with improving discipline, though valuation needs faster earnings recovery.',
-    target: '$104',
-    earnings: 'Jun 27',
-    peerPe: '21.7',
-    peers: ['LULU', 'ADDYY', 'DECK'],
-    events: ['Direct channel reset', 'Inventory normalization', 'China trend is important'],
-  },
-  UNH: {
-    name: 'UnitedHealth Group',
-    industry: 'Healthcare',
-    price: '$501.28',
-    move: '+0.93% today',
-    growth: 12.9,
-    pe: 18.1,
-    income: [17.3, 20.1, 22.4, 23.1, 28.0],
-    thesis: 'Steady healthcare compounding with a P/E that sits closer to the Lynch comfort zone.',
-    target: '$575',
-    earnings: 'Jul 12',
-    peerPe: '19.6',
-    peers: ['HUM', 'CI', 'ELV'],
-    events: ['Optum growth remains central', 'Policy headline sensitivity', 'Cash conversion is strong'],
-  },
-  F: {
-    name: 'Ford Motor Co.',
-    industry: 'Auto',
-    price: '$12.84',
-    move: '+1.02% today',
-    growth: 10.2,
-    pe: 7.6,
-    income: [17.9, -2.0, 4.3, 4.9, 7.1],
-    thesis: 'Low P/E screens well, but cyclical earnings make the growth calculation noisier.',
-    target: '$15',
-    earnings: 'Jul 24',
-    peerPe: '8.8',
-    peers: ['GM', 'TSLA', 'TM'],
-    events: ['Truck margins matter most', 'EV losses narrowing', 'Dividend attracts value buyers'],
-  },
-}
-
 // Demo users. Ian's auth can replace this with the real session user.
 const INITIAL_USERS = {
   Avery: { name: 'Avery Chen', initials: 'AC', favorites: ['MSFT', 'UNH', 'F'] },
@@ -126,22 +31,27 @@ const INDUSTRIES = ['All', 'Technology', 'Healthcare', 'Auto', 'Consumer']
 
 // Metric helpers keep the Lynch-rule calculations in one predictable place.
 function growthOverPe(stock) {
+  if (stock.growth == null || stock.pe == null) return null
   return stock.growth / stock.pe
 }
 
 function formatRatio(value) {
+  if (value == null) return 'N/A'
   return value.toFixed(2)
 }
 
 function signalClass(stock) {
   const ratio = growthOverPe(stock)
+  if (ratio == null) return ''
   if (ratio >= 1) return 'pass'
   if (ratio >= 0.6) return 'warn'
   return 'bad'
 }
 
 function signalText(stock) {
-  return growthOverPe(stock) >= 1 ? 'Growth clears P/E' : 'P/E ahead of growth'
+  const ratio = growthOverPe(stock)
+  if (ratio == null) return 'Data unavailable'
+  return ratio >= 1 ? 'Growth clears P/E' : 'P/E ahead of growth'
 }
 
 // Convert net income history into SVG paths for the sparkline chart.
@@ -158,11 +68,12 @@ function pathFromIncome(income) {
 }
 
 function App() {
-  // View state controls whether the user sees the dashboard or the separate auth screen.
   const [view, setView] = useState('dashboard')
   const [authMode, setAuthMode] = useState('login')
 
   // Demo app state. Backend/auth integration can replace these with API/session data.
+  const [fetchedStocks, setFetchedStocks] = useState({})
+  const [isLoading, setIsLoading] = useState(true)
   const [users, setUsers] = useState(INITIAL_USERS)
   const [currentUser, setCurrentUser] = useState('Avery')
   const [currentTicker, setCurrentTicker] = useState('MSFT')
@@ -171,24 +82,26 @@ function App() {
   const [showError, setShowError] = useState(false)
 
   const activeUser = users[currentUser]
-  const activeStock = STOCKS[currentTicker]
+  const activeStock = fetchedStocks[currentTicker] || {
+    name: 'Loading...', industry: '', price: '', move: '', growth: 0, pe: 0, income: [0, 0], events: [], peers: [], thesis: '', target: '', earnings: '', peerPe: ''
+  }
 
   const favoriteTickers = activeUser.favorites
   const filteredFavorites = favoriteTickers.filter(
-    (ticker) => industryFilter === 'All' || STOCKS[ticker].industry === industryFilter,
+    (ticker) => fetchedStocks[ticker] && (industryFilter === 'All' || fetchedStocks[ticker].industry === industryFilter),
   )
 
   // Recompute portfolio summary cards when the current user's favorites change.
   const summary = useMemo(() => {
     const industryCounts = favoriteTickers.reduce((counts, ticker) => {
-      const industry = STOCKS[ticker].industry
+      const industry = fetchedStocks[ticker]?.industry || 'Unknown'
       counts[industry] = (counts[industry] || 0) + 1
       return counts
     }, {})
     const topIndustry = Object.entries(industryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None'
-    const passCount = favoriteTickers.filter((ticker) => growthOverPe(STOCKS[ticker]) >= 1).length
+    const passCount = favoriteTickers.filter((ticker) => fetchedStocks[ticker] && growthOverPe(fetchedStocks[ticker]) >= 1).length
     const avgPeg =
-      favoriteTickers.reduce((total, ticker) => total + growthOverPe(STOCKS[ticker]), 0) /
+      favoriteTickers.reduce((total, ticker) => total + (fetchedStocks[ticker] ? growthOverPe(fetchedStocks[ticker]) : 0), 0) /
       (favoriteTickers.length || 1)
 
     return {
@@ -213,17 +126,96 @@ function App() {
   }
 
   // Handles ticker searches and opens the not-found modal for unknown symbols.
-  function handleSearch(event) {
+  
+  useEffect(() => {
+    let active = true;
+    async function loadInitialData() {
+      setIsLoading(true);
+      const tickersToFetch = [...new Set([currentTicker, ...users[currentUser].favorites])];
+      const stocksData = { ...fetchedStocks };
+      
+      for (const ticker of tickersToFetch) {
+        if (stocksData[ticker]) continue; // Already fetched
+        try {
+          const basicRes = await fetch(`http://localhost:8000/api/stock/${ticker}`);
+          if (!basicRes.ok) continue;
+          const basic = await basicRes.json();
+          
+          const detailRes = await fetch(`http://localhost:8000/api/stock/${ticker}/details`);
+          const detail = detailRes.ok ? await detailRes.json() : {};
+          
+          const peersArray = detail.peers || [];
+          const peerData = detail.peerData || {};
+          
+          // Merge peerData
+          Object.assign(stocksData, peerData);
+          
+          stocksData[ticker] = {
+            name: basic.name || basic.symbol,
+            industry: basic.industry,
+            price: basic.price || 'N/A',
+            move: basic.change_percent || 'N/A',
+            growth: basic.growth_rate,
+            pe: basic.pe_ratio,
+            income: basic.income_history && basic.income_history.length >= 2 ? basic.income_history : [0, 0],
+            thesis: basic.description || 'No description available.',
+            target: detail.target_price || 'N/A',
+            earnings: (detail.upcoming_earnings && detail.upcoming_earnings[0]) || 'N/A',
+            peerPe: detail.peerPe || 'N/A',
+            peers: peersArray,
+            events: detail.events || ['Live data pulled from Alpha Vantage']
+          };
+        } catch (e) {
+           console.error("Failed to load", ticker, e);
+        }
+      }
+      if (active) {
+        setFetchedStocks(stocksData);
+        setIsLoading(false);
+      }
+    }
+    loadInitialData();
+    return () => { active = false; };
+  }, [currentUser]); // Run on mount and if user changes
+
+async function handleSearch(event) {
     event.preventDefault()
     const ticker = tickerInput.trim().toUpperCase()
+    if (!ticker) return
 
-    if (!STOCKS[ticker]) {
+    setShowError(false)
+
+    try {
+      const basicRes = await fetch(`http://localhost:8000/api/stock/${ticker}`)
+      if (!basicRes.ok) throw new Error('Not found')
+      const basic = await basicRes.json()
+
+      const detailRes = await fetch(`http://localhost:8000/api/stock/${ticker}/details`)
+      const detail = detailRes.ok ? await detailRes.json() : {}
+
+      const newStock = {
+        name: basic.name || basic.symbol,
+        industry: basic.industry,
+        price: basic.price || 'N/A',
+        move: basic.change_percent || 'N/A',
+        growth: basic.growth_rate,
+        pe: basic.pe_ratio,
+        income: basic.income_history && basic.income_history.length >= 2 ? basic.income_history : [0, 0],
+        thesis: basic.description || 'No description available.',
+        target: detail.target_price || 'N/A',
+        earnings: (detail.upcoming_earnings && detail.upcoming_earnings[0]) || 'N/A',
+        peerPe: detail.peerPe || 'N/A',
+        peers: detail.peers || [],
+        events: detail.events || ['Live data pulled from Alpha Vantage']
+      }
+
+      setFetchedStocks(prev => ({ ...prev, ...(detail.peerData || {}), [ticker]: newStock }))
+      setCurrentTicker(ticker)
+      setTickerInput(ticker)
+      setShowError(false)
+    } catch (err) {
       setShowError(true)
-      return
     }
-
-    setCurrentTicker(ticker)
-    setTickerInput(ticker)
   }
 
   function toggleFavorite() {
@@ -253,6 +245,14 @@ function App() {
     setShowError(false)
     setCurrentTicker('MSFT')
     setTickerInput('MSFT')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="app-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+         <h2>Loading live dashboard...</h2>
+      </div>
+    );
   }
 
   if (view === 'auth') {
@@ -323,6 +323,7 @@ function App() {
           <aside className="side-stack">
             <FavoritesPanel
               favorites={filteredFavorites}
+              stocks={fetchedStocks}
               industryFilter={industryFilter}
               setIndustryFilter={setIndustryFilter}
               onOpenFavorite={openFavorite}
@@ -331,10 +332,10 @@ function App() {
           </aside>
         </div>
 
-        <FavoritesTable favorites={favoriteTickers} />
+        <FavoritesTable favorites={favoriteTickers} stocks={fetchedStocks} />
 
         <div className="dashboard-grid">
-          <Peers stock={activeStock} />
+          <Peers stock={activeStock} stocks={fetchedStocks} />
           <PortfolioSummary summary={summary} />
         </div>
       </main>
@@ -446,10 +447,10 @@ function StockPanel({ stock, ticker, sparkline, isFavorite, onFavorite }) {
       </div>
 
       <div className="metrics">
-        <Metric icon={<TrendingUp size={21} />} label="Growth Rate" value={`${stock.growth.toFixed(1)}%`}>
+        <Metric icon={<TrendingUp size={21} />} label="Growth Rate" value={stock.growth != null ? `${stock.growth.toFixed(1)}%` : 'N/A'}>
           Computed from 5-year net income CAGR.
         </Metric>
-        <Metric icon={<Scale size={21} />} label="P/E Ratio" value={stock.pe.toFixed(1)}>
+        <Metric icon={<Scale size={21} />} label="P/E Ratio" value={stock.pe != null ? stock.pe.toFixed(1) : 'N/A'}>
           Lynch screen prefers P/E below growth rate.
         </Metric>
         <Metric icon={<Gauge size={21} />} label="Growth / P/E" value={formatRatio(growthOverPe(stock))} tone={signalClass(stock)}>
@@ -494,7 +495,7 @@ function ResearchBrief({ stock, ticker }) {
 }
 
 // Favorite stock cards plus the industry filter dropdown.
-function FavoritesPanel({ favorites, industryFilter, setIndustryFilter, onOpenFavorite }) {
+function FavoritesPanel({ favorites, stocks, industryFilter, setIndustryFilter, onOpenFavorite }) {
   return (
     <section className="panel" id="favoritesPanel">
       <div className="section-title">
@@ -515,13 +516,13 @@ function FavoritesPanel({ favorites, industryFilter, setIndustryFilter, onOpenFa
       </div>
       <div className="favorite-list">
         {favorites.length ? favorites.map((ticker) => {
-          const stock = STOCKS[ticker]
+          const stock = stocks[ticker]
           return (
             <button className="fav-card" type="button" key={ticker} onClick={() => onOpenFavorite(ticker)}>
               <div className="fav-top"><strong>{ticker}</strong><span className="chip">{stock.industry}</span></div>
               <div className="fav-metrics">
-                <span>Growth <b>{stock.growth.toFixed(1)}%</b></span>
-                <span>P/E <b>{stock.pe.toFixed(1)}</b></span>
+                <span>Growth <b>{stock.growth != null ? `${stock.growth.toFixed(1)}%` : 'N/A'}</b></span>
+                <span>P/E <b>{stock.pe != null ? stock.pe.toFixed(1) : 'N/A'}</b></span>
                 <span>G/P/E <b className={signalClass(stock)}>{formatRatio(growthOverPe(stock))}</b></span>
               </div>
             </button>
@@ -555,7 +556,7 @@ function SpecialSignals({ stock }) {
 }
 
 // Full comparison table for the current user's saved stocks.
-function FavoritesTable({ favorites }) {
+function FavoritesTable({ favorites, stocks }) {
   return (
     <section className="panel table-wrap wide-panel">
       <div className="section-title">
@@ -578,14 +579,14 @@ function FavoritesTable({ favorites }) {
         </thead>
         <tbody>
           {favorites.map((ticker) => {
-            const stock = STOCKS[ticker]
+            const stock = stocks[ticker]
             return (
               <tr key={ticker}>
                 <td><strong>{ticker}</strong></td>
                 <td>{stock.name}</td>
                 <td>{stock.industry}</td>
-                <td>{stock.growth.toFixed(1)}%</td>
-                <td>{stock.pe.toFixed(1)}</td>
+                <td>{stock.growth != null ? `${stock.growth.toFixed(1)}%` : 'N/A'}</td>
+                <td>{stock.pe != null ? stock.pe.toFixed(1) : 'N/A'}</td>
                 <td className={signalClass(stock)}><strong>{formatRatio(growthOverPe(stock))}</strong></td>
                 <td>{signalText(stock)}</td>
               </tr>
@@ -598,7 +599,7 @@ function FavoritesTable({ favorites }) {
 }
 
 // Peer comparison list for the selected stock.
-function Peers({ stock }) {
+function Peers({ stock, stocks }) {
   return (
     <section className="panel">
       <div className="section-title">
@@ -609,13 +610,13 @@ function Peers({ stock }) {
       </div>
       <div className="peer-table">
         {stock.peers.map((ticker) => {
-          const peer = STOCKS[ticker] || { industry: 'Comparable', growth: 9.8, pe: 19.2 }
+          const peer = stocks[ticker] || { industry: 'Comparable', growth: 9.8, pe: 19.2 }
           return (
             <div className="peer-row" key={ticker}>
               <strong>{ticker}</strong>
               <span>{peer.industry}</span>
-              <span>Growth {peer.growth.toFixed(1)}%</span>
-              <span>P/E {peer.pe.toFixed(1)}</span>
+              <span>Growth {peer.growth != null ? `${peer.growth.toFixed(1)}%` : 'N/A'}</span>
+              <span>P/E {peer.pe != null ? peer.pe.toFixed(1) : 'N/A'}</span>
             </div>
           )
         })}
