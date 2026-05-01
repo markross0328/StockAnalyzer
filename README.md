@@ -61,6 +61,77 @@ npm install
 npm run dev
 ```
 
+### Backend (Node + Express + DynamoDB)
+The backend now supports:
+- Signup, login, and logout with bcrypt password hashing and JWT access tokens.
+- Favorite stock storage scoped per authenticated user.
+- Search favorites by industry using a DynamoDB GSI.
+
+#### Backend setup
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
+
+Set `JWT_SECRET` in `.env` before starting.
+
+#### Local DynamoDB (optional)
+```bash
+cd backend
+docker compose up -d
+```
+
+If using local DynamoDB, set `DYNAMODB_ENDPOINT=http://localhost:8000` in `.env`.
+
+Create required tables:
+```bash
+cd backend
+npm run dynamodb:setup
+```
+
+#### Run backend
+```bash
+cd backend
+npm run dev
+```
+
+Health check:
+```bash
+GET /health
+```
+
+#### API endpoints
+- `POST /auth/signup`
+  - body: `{ "name": "Avery", "email": "avery@example.com", "password": "secret123" }`
+- `POST /auth/login`
+  - body: `{ "email": "avery@example.com", "password": "secret123" }`
+- `POST /auth/logout`
+  - header: `Authorization: Bearer <token>`
+- `POST /favorites`
+  - header: `Authorization: Bearer <token>`
+  - body: `{ "ticker": "MSFT", "industry": "Technology" }`
+- `GET /favorites`
+  - header: `Authorization: Bearer <token>`
+- `GET /favorites/search?industry=Technology`
+  - header: `Authorization: Bearer <token>`
+
+#### Tests
+```bash
+cd backend
+npm test
+```
+
+#### Deployment (demo-ready)
+This repo includes:
+- `backend/Dockerfile` for containerized backend deployment.
+- `render.yaml` for one-click Render service setup.
+
+Deploy flow:
+1. Push repo to GitHub.
+2. In Render, create a Blueprint deploy from the repository.
+3. Confirm environment variables (`JWT_SECRET`, table names, `AWS_REGION`) and attach AWS credentials with DynamoDB access.
+4. Run `npm run dynamodb:setup` once against the target AWS account to create tables.
 ### Backend
 The backend is built with Python and FastAPI, utilizing the Alpha Vantage API for stock data. Mark's API endpoints are implemented in:
 - `backend/main.py` - FastAPI routes (`/api/stock/{ticker}` and `/api/stock/{ticker}/details`).

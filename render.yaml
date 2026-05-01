@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: stock-analyzer-backend
+    runtime: docker
+    rootDir: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: AWS_REGION
+        value: us-east-1
+      - key: DYNAMODB_TABLE_USERS
+        value: stock-analyzer-users
+      - key: DYNAMODB_TABLE_FAVORITES
+        value: stock-analyzer-favorites
+      - key: DYNAMODB_TABLE_REVOKED_TOKENS
+        value: stock-analyzer-revoked-tokens
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: JWT_SECRET
+        generateValue: true
