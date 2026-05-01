@@ -21,10 +21,26 @@ function computeGrowthFromIncomeReports(reports) {
   return ((first - second) / Math.abs(second)) * 100;
 }
 
-function mapStockPayload({ ticker, quote, overview, incomeStatement }) {
+function getLatestIntradayClose(intradayPayload) {
+  const series = intradayPayload?.["Time Series (1min)"];
+  if (!series || typeof series !== "object") {
+    return null;
+  }
+
+  const latestTimestamp = Object.keys(series).sort().at(-1);
+  if (!latestTimestamp) {
+    return null;
+  }
+
+  return toNumber(series[latestTimestamp]?.["4. close"]);
+}
+
+function mapStockPayload({ ticker, quote, intraday, overview, incomeStatement }) {
   const growth = computeGrowthFromIncomeReports(incomeStatement?.annualReports || []);
   const pe = toNumber(overview?.PERatio);
-  const price = toNumber(quote?.["05. price"]);
+  const intradayPrice = getLatestIntradayClose(intraday);
+  const quotePrice = toNumber(quote?.["05. price"]);
+  const price = intradayPrice ?? quotePrice;
   const previousClose = toNumber(quote?.["08. previous close"]);
   const movePercent = toNumber(quote?.["10. change percent"]?.replace("%", ""));
 
@@ -69,6 +85,15 @@ async function fetchAlphaVantage(functionName, ticker) {
   return payload;
 }
 
+async function fetchIntradayBestEffort(ticker) {
+  try {
+    return await fetchAlphaVantage("TIME_SERIES_INTRADAY", ticker);
+  } catch {
+    // Intraday is optional for pricing freshness. We fall back to GLOBAL_QUOTE.
+    return {};
+  }
+}
+
 async function getLiveStockData(tickerRaw) {
   if (!env.alphaVantageApiKey) {
     throw new Error("ALPHAVANTAGE_API_KEY is not configured.");
@@ -84,8 +109,9 @@ async function getLiveStockData(tickerRaw) {
     return cached.data;
   }
 
-  const [quote, overview, incomeStatement] = await Promise.all([
+  const [quote, intraday, overview, incomeStatement] = await Promise.all([
     fetchAlphaVantage("GLOBAL_QUOTE", ticker),
+    fetchIntradayBestEffort(ticker),
     fetchAlphaVantage("OVERVIEW", ticker),
     fetchAlphaVantage("INCOME_STATEMENT", ticker),
   ]);
@@ -93,6 +119,7 @@ async function getLiveStockData(tickerRaw) {
   const data = mapStockPayload({
     ticker,
     quote: quote["Global Quote"] || {},
+    intraday,
     overview,
     incomeStatement,
   });

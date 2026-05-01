@@ -105,6 +105,7 @@ function App() {
   const [showError, setShowError] = useState(false)
   const [favoritesLoading, setFavoritesLoading] = useState(false)
   const [stockLoading, setStockLoading] = useState(false)
+  const [favoriteSaving, setFavoriteSaving] = useState(false)
   const [favoriteIndustryByTicker, setFavoriteIndustryByTicker] = useState({})
 
   const activeStock = currentTicker ? stockByTicker[currentTicker] || EMPTY_STOCK : EMPTY_STOCK
@@ -224,6 +225,7 @@ function App() {
 
   async function saveFavorite() {
     if (!currentTicker || !activeStock || favoriteTickers.includes(currentTicker)) return
+    setFavoriteSaving(true)
     try {
       const industry = activeStock.industry || 'Unknown'
       await apiRequest('/favorites', {
@@ -235,6 +237,8 @@ function App() {
       setFavoriteIndustryByTicker((current) => ({ ...current, [currentTicker]: industry }))
     } catch (error) {
       setAuthError(error.message)
+    } finally {
+      setFavoriteSaving(false)
     }
   }
 
@@ -365,6 +369,7 @@ function App() {
                   ticker={currentTicker}
                   sparkline={sparkline}
                   isFavorite={favoriteTickers.includes(currentTicker)}
+                  isSavingFavorite={favoriteSaving}
                   onFavorite={saveFavorite}
                 />
                 <ResearchBrief stock={activeStock} ticker={currentTicker} />
@@ -463,7 +468,7 @@ function Sidebar({ currentUser, scrollToSection }) {
   )
 }
 
-function StockPanel({ stock, ticker, sparkline, isFavorite, onFavorite }) {
+function StockPanel({ stock, ticker, sparkline, isFavorite, isSavingFavorite, onFavorite }) {
   return (
     <section className="panel">
       <div className="stock-hero">
@@ -490,6 +495,14 @@ function StockPanel({ stock, ticker, sparkline, isFavorite, onFavorite }) {
             <span className="price">{formatMoney(stock.price)}</span>
             <span className="gain">{formatPercent(stock.movePercent)}</span>
           </div>
+          <button
+            className={`favorite-action ${isFavorite ? 'saved' : ''}`}
+            type="button"
+            onClick={onFavorite}
+            disabled={isFavorite || isSavingFavorite}
+          >
+            {isFavorite ? 'Saved to favorites' : isSavingFavorite ? 'Saving...' : 'Add to favorites'}
+          </button>
           <p className="thesis">Live source: Alpha Vantage ({stock.source}).</p>
         </div>
 

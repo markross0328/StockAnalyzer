@@ -409,6 +409,22 @@ h3 {
   line-height: 1.55;
 }
 
+.favorite-action {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--mint);
+  border-radius: 8px;
+  background: #e9f3ee;
+  color: var(--mint-dark);
+  font-weight: 800;
+}
+
+.favorite-action.saved {
+  border-color: var(--line);
+  background: #f6f8f7;
+  color: var(--muted);
+}
+
 .spark {
   display: grid;
   align-content: end;
