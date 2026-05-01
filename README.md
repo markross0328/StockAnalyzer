@@ -46,7 +46,15 @@ The Stock Analyzer is an application that allows users to query a stock by its t
 ## Local Setup
 
 ### Frontend
-The frontend is initialized using Vite + React. To get started:
+The frontend is built with Vite + React. Jayden's UI is implemented in:
+- `frontend/src/App.jsx` - React components, state, demo data, dashboard/auth views.
+- `frontend/src/App.css` - dashboard and auth styling.
+- `frontend/src/index.css` - global reset and app theme base.
+- `stock-ui-preview.png` - screenshot for README/submission use.
+
+The React app currently uses demo stock/user data in `frontend/src/App.jsx`. Mark can replace the `STOCKS` and `INITIAL_USERS` demo objects with backend API calls, while Ian can connect the auth view to the real auth/session flow.
+
+To get started:
 ```bash
 cd frontend
 npm install
