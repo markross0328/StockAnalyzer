@@ -2,7 +2,12 @@ const dotenv = require("dotenv");
 
 dotenv.config({ quiet: true });
 
-const requiredEnvVars = ["JWT_SECRET", "DYNAMODB_TABLE_USERS", "DYNAMODB_TABLE_FAVORITES"];
+const requiredEnvVars = [
+  "JWT_SECRET",
+  "DYNAMODB_TABLE_USERS",
+  "DYNAMODB_TABLE_FAVORITES",
+  "DYNAMODB_TABLE_REVOKED_TOKENS",
+];
 
 function validateEnv() {
   const missing = requiredEnvVars.filter((key) => !process.env[key]);
@@ -20,5 +25,7 @@ module.exports = {
   usersTable: process.env.DYNAMODB_TABLE_USERS || "stock-analyzer-users",
   favoritesTable: process.env.DYNAMODB_TABLE_FAVORITES || "stock-analyzer-favorites",
   revokedTokensTable: process.env.DYNAMODB_TABLE_REVOKED_TOKENS || "stock-analyzer-revoked-tokens",
+  alphaVantageApiKey: process.env.ALPHAVANTAGE_API_KEY || "",
+  stockCacheTtlMs: Number(process.env.STOCK_CACHE_TTL_MS || 300000),
   validateEnv,
 };

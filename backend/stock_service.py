@@ -78,7 +78,7 @@ def get_basic_metrics(ticker: str):
         except (ValueError, TypeError):
             pass
 
-    # 3. Fetch Global Quote (for current price and daily move)
+    # 3. Fetch Global Quote (for daily change percent)
     quote_params = {
         "function": "GLOBAL_QUOTE",
         "symbol": ticker,
@@ -86,15 +86,37 @@ def get_basic_metrics(ticker: str):
     }
     quote_res = requests.get(BASE_URL, params=quote_params)
     quote_data = quote_res.json().get("Global Quote", {})
-
-    price = quote_data.get("05. price", "N/A")
-    if price != "N/A":
-        try:
-            price = f"${float(price):.2f}"
-        except ValueError:
-            pass
-
     change_percent = quote_data.get("10. change percent", "N/A")
+    
+    # 4. Fetch Intraday (for the absolute true live price)
+    intraday_params = {
+        "function": "TIME_SERIES_INTRADAY",
+        "symbol": ticker,
+        "interval": "1min",
+        "apikey": API_KEY
+    }
+    intraday_res = requests.get(BASE_URL, params=intraday_params)
+    time_series = intraday_res.json().get("Time Series (1min)", {})
+    
+    price = "N/A"
+    if time_series:
+        # Get the most recent 1-minute candle
+        latest_time = list(time_series.keys())[0]
+        live_price = time_series[latest_time].get("4. close", "N/A")
+        if live_price != "N/A":
+            try:
+                price = f"${float(live_price):.2f}"
+            except ValueError:
+                pass
+
+    # Fallback to Global Quote price if the Intraday pull fails
+    if price == "N/A":
+        fallback_price = quote_data.get("05. price", "N/A")
+        if fallback_price != "N/A":
+            try:
+                price = f"${float(fallback_price):.2f}"
+            except ValueError:
+                pass
 
     return {
         "symbol": ticker,

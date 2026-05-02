@@ -8,6 +8,10 @@ const clientConfig = {
 
 if (env.dynamodbEndpoint) {
   clientConfig.endpoint = env.dynamodbEndpoint;
+  clientConfig.credentials = {
+    accessKeyId: "local",
+    secretAccessKey: "local",
+  };
 }
 
 const nativeClient = new DynamoDBClient(clientConfig);

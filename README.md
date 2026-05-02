@@ -58,8 +58,11 @@ To get started:
 ```bash
 cd frontend
 npm install
+cp .env.example .env
 npm run dev
 ```
+
+The frontend requires backend auth. If you are not signed in, dashboard access is blocked until login/signup succeeds.
 
 ### Backend (Node + Express + DynamoDB)
 The backend now supports:
@@ -75,6 +78,7 @@ cp .env.example .env
 ```
 
 Set `JWT_SECRET` in `.env` before starting.
+Set `ALPHAVANTAGE_API_KEY` in `.env` to enable live stock data.
 
 #### Local DynamoDB (optional)
 ```bash
@@ -106,6 +110,8 @@ GET /health
   - body: `{ "name": "Avery", "email": "avery@example.com", "password": "secret123" }`
 - `POST /auth/login`
   - body: `{ "email": "avery@example.com", "password": "secret123" }`
+- `GET /auth/me`
+  - header: `Authorization: Bearer <token>`
 - `POST /auth/logout`
   - header: `Authorization: Bearer <token>`
 - `POST /favorites`
@@ -115,12 +121,21 @@ GET /health
   - header: `Authorization: Bearer <token>`
 - `GET /favorites/search?industry=Technology`
   - header: `Authorization: Bearer <token>`
+- `GET /stocks/:ticker`
+  - header: `Authorization: Bearer <token>`
+  - returns live stock data from Alpha Vantage (cached server-side)
+  - called by frontend only when a ticker is submitted in search
 
 #### Tests
 ```bash
 cd backend
 npm test
 ```
+
+#### Troubleshooting auth errors
+- If signup/login returns "Database tables are missing", run `npm run dynamodb:setup`.
+- If you see an `email-index` message, the users table GSI is missing; re-run table setup.
+- If you see an AWS credentials message, ensure your AWS credentials/role can access DynamoDB.
 
 #### Deployment (demo-ready)
 This repo includes:
